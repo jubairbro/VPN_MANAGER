@@ -1,0 +1,146 @@
+#!/bin/bash
+
+#================[ √ ]=================#
+# Jubair VPN Manager - Main Menu v1.0
+# Script by: JubairBro
+#================[ √ ]=================#
+
+# Colors for UI
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+# Function to draw UI
+draw_ui() {
+    clear
+    echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
+    for text in "$@"; do
+        printf "${CYAN}│${NC} %-44s ${CYAN}│${NC}\n" "$text"
+    done
+    echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
+}
+
+# Fetch System Info
+fetch_system_info() {
+    OS=$(lsb_release -d | awk -F"\t" '{print $2}')
+    CPU=$(nproc)
+    RAM=$(free -m | awk '/Mem:/ {print $3"/"$2}')
+    UPTIME=$(uptime -p | cut -d " " -f2-)
+    DOMAIN=$(cat /root/VPN_MANAGER/domain.txt 2>/dev/null || echo "Not Set")
+    IP=$(curl -s ifconfig.me)
+    ISP=$(whois $IP | grep -i "orgname" | awk '{print $2}' || echo "Unknown")
+    CITY=$(whois $IP | grep -i "city" | awk '{print $2}' || echo "Unknown")
+}
+
+# Fetch Account Info
+fetch_account_info() {
+    SSH_COUNT=$(wc -l < /root/VPN_MANAGER/ssh_users.txt 2>/dev/null || echo 0)
+    VMESS_COUNT=$(wc -l < /root/VPN_MANAGER/vmess_users.txt 2>/dev/null || echo 0)
+    VLESS_COUNT=$(wc -l < /root/VPN_MANAGER/vless_users.txt 2>/dev/null || echo 0)
+    TROJAN_COUNT=$(wc -l < /root/VPN_MANAGER/trojan_users.txt 2>/dev/null || echo 0)
+    SHADOWSOCKS_COUNT=$(wc -l < /root/VPN_MANAGER/shadowsocks_users.txt 2>/dev/null || echo 0)
+    NOOBZ_COUNT=$(wc -l < /root/VPN_MANAGER/noobz_users.txt 2>/dev/null || echo 0)
+}
+
+# Fetch Service Status
+fetch_service_status() {
+    SSH_STATUS=$(systemctl is-active sshd 2>/dev/null || echo "OFF")
+    NGINX_STATUS=$(systemctl is-active nginx 2>/dev/null || echo "OFF")
+    XRAY_STATUS=$(systemctl is-active xray 2>/dev/null || echo "OFF")
+    DROPBEAR_STATUS=$(systemctl is-active dropbear 2>/dev/null || echo "OFF")
+    HAPROXY_STATUS=$(systemctl is-active haproxy 2>/dev/null || echo "OFF")
+    WS_EPRO_STATUS="ON" # Placeholder for WS-ePro
+}
+
+# Main Menu
+main_menu() {
+    while true; do
+        fetch_system_info
+        fetch_account_info
+        fetch_service_status
+        draw_ui \
+            "System OS    = $OS" \
+            "Core System  = $CPU" \
+            "Server RAM   = $RAM MB" \
+            "Uptime       = $UPTIME" \
+            "Domain       = $DOMAIN" \
+            "IP VPS       = $IP" \
+            "ISP          = $ISP" \
+            "City         = $CITY" \
+            "" \
+            ">>> YOUR ACCOUNT ON VPS <<<" \
+            "SSH/OpenVPN        > $SSH_COUNT ACCOUNT PREMIUM" \
+            "VMESS/WS/GRPC      > $VMESS_COUNT ACCOUNT PREMIUM" \
+            "VLESS/WS/GRPC      > $VLESS_COUNT ACCOUNT PREMIUM" \
+            "TROJAN/WS/GRPC     > $TROJAN_COUNT ACCOUNT PREMIUM" \
+            "SHADOWSOCKS/WS/GRPC> $SHADOWSOCKS_COUNT ACCOUNT PREMIUM" \
+            "" \
+            "SSH        : $SSH_STATUS" \
+            "NGINX      : $NGINX_STATUS" \
+            "XRAY       : $XRAY_STATUS" \
+            "WS-ePRO    : $WS_EPRO_STATUS" \
+            "DROPBEAR   : $DROPBEAR_STATUS" \
+            "HAPROXY    : $HAPROXY_STATUS" \
+            "" \
+            "[01] SSH MENU" \
+            "[02] VMESS MENU" \
+            "[03] VLESS MENU" \
+            "[04] TROJAN MENU" \
+            "[05] SHADOWSOCKS MENU" \
+            "[06] NOOBZVPN MENU" \
+            "[07] LIMIT SPEED" \
+            "[08] DELETE ALL EXPIRED" \
+            "[09] AUTO REBOOT" \
+            "[10] INFO PORT" \
+            "[11] SPEEDTEST" \
+            "[12] RUNNING" \
+            "[13] CLEAR LOG" \
+            "[14] CHECK BANDWIDTH" \
+            "[15] BACKUP/RESTORE" \
+            "[16] REBOOT" \
+            "[17] RESTART" \
+            "[18] DOMAIN SETUP" \
+            "[19] CERT SSL" \
+            "[20] INSTALL UDP" \
+            "[21] CLEAR CACHE" \
+            "[22] BOT NOTIFICATION" \
+            "[23] UPDATE SCRIPT" \
+            "[24] BOT PANEL" \
+            "[25] CHANGE BANNER" \
+            "[0] BACK TO EXIT MENU"
+        read -p "Select an option [0-25]: " option
+
+        case $option in
+            1|01) /root/VPN_MANAGER/ssh-menu.sh ;;
+            2|02) /root/VPN_MANAGER/vmess-menu.sh ;;
+            3|03) /root/VPN_MANAGER/vless-menu.sh ;;
+            4|04) /root/VPN_MANAGER/trojan-menu.sh ;;
+            5|05) /root/VPN_MANAGER/shadowsocks-menu.sh ;;
+            6|06) /root/VPN_MANAGER/noobz-menu.sh ;;
+            7|07) /root/VPN_MANAGER/limit-speed.sh ;;
+            8|08) /root/VPN_MANAGER/del-all-exp.sh ;;
+            9|09) /root/VPN_MANAGER/auto-reboot.sh ;;
+            10) /root/VPN_MANAGER/info-port.sh ;;
+            11) /root/VPN_MANAGER/speedtest.sh ;;
+            12) /root/VPN_MANAGER/running.sh ;;
+            13) /root/VPN_MANAGER/clear-log.sh ;;
+            14) /root/VPN_MANAGER/check-bandwidth.sh ;;
+            15) /root/VPN_MANAGER/backup-restore.sh ;;
+            16) /root/VPN_MANAGER/reboot.sh ;;
+            17) /root/VPN_MANAGER/restart.sh ;;
+            18) /root/VPN_MANAGER/domain-ssl.sh ;;
+            19) /root/VPN_MANAGER/cert-ssl.sh ;;
+            20) /root/VPN_MANAGER/install-udp.sh ;;
+            21) /root/VPN_MANAGER/clear-cache.sh ;;
+            22) /root/VPN_MANAGER/bot-notification.sh ;;
+            23) /root/VPN_MANAGER/update-script.sh ;;
+            24) /root/VPN_MANAGER/bot-panel.sh ;;
+            25) /root/VPN_MANAGER/change-banner.sh ;;
+            0) echo -e "${GREEN}Exiting...${NC}"; exit 0 ;;
+            *) echo -e "${RED}Invalid option!${NC}"; sleep 1 ;;
+        esac
+    done
+}
+
+main_menu
