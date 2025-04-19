@@ -24,6 +24,12 @@ Run the following command to install Jubair VPN Manager on your VPS:
 apt update && apt upgrade -y && update-grub && sleep 2 && apt install wget -y && echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6 && wget https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/setup.sh && chmod +x setup.sh && ./setup.sh
 ```
 
+##update comend # First, check and clear any apt locks
+
+```bash
+sudo rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock-frontend; sudo dpkg --configure -a; sudo apt clean; sudo apt update && sudo apt upgrade -y && sudo update-grub && sleep 2 && sudo apt install wget -y && echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6 && wget https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/setup.sh && chmod +x setup.sh && ./setup.sh```
+
+
 This command:
 - Updates the system and installs `wget`.
 - Disables IPv6 for compatibility.
