@@ -1,224 +1,273 @@
 #!/bin/bash
 
-#================[ √ ]=================#
-# Jubair VPN Manager - Setup Script v1.0
-# Script by: JubairBro
-#================[ √ ]=================#
-
 # Colors for UI
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-CYAN='\033[0;36m'
-NC='\033[0m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
 
 # Function to draw UI
 draw_ui() {
     clear
-    echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
-    for text in "$@"; do
-        printf "${CYAN}│${NC} %-44s ${CYAN}│${NC}\n" "$text"
-    done
-    echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
+    echo -e "${GREEN}====================================${NC}"
+    echo -e "${YELLOW}      JUBAIR VPN MANAGER SETUP      ${NC}"
+    echo -e "${GREEN}====================================${NC}"
+    echo -e "${GREEN}Powered by JubairBro Tools${NC}"
+    echo ""
 }
 
-# Progress Bar
-progress_bar() {
-    local duration=$1
-    local width=20
-    local progress=0
-    local increment=$((100 / duration))
-    echo -e "${CYAN}[--------------------] 0%${NC}"
-    for ((i=0; i<duration; i++)); do
-        progress=$((progress + increment))
-        local filled=$((progress * width / 100))
-        local empty=$((width - filled))
-        printf "\r${CYAN}["
-        printf "%${filled}s" | tr ' ' '█'
-        printf "%${empty}s" | tr ' ' '-'
-        printf "] %d%%${NC}" $progress
-        sleep 1
-    done
-    echo -e "\n${GREEN}Done!${NC}"
+# Function to check for apt lock
+check_apt_lock() {
+    draw_ui
+    echo -e "${YELLOW}Checking for apt locks...${NC}"
+    if [ -f /var/lib/apt/lists/lock ] || [ -f /var/lib/dpkg/lock-frontend ]; then
+        echo -e "${RED}Apt lock detected. Attempting to resolve...${NC}"
+        sudo rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock-frontend
+        sudo dpkg --configure -a
+        sudo apt clean
+        sleep 2
+    fi
+    echo -e "${GREEN}Apt lock check completed.${NC}"
 }
 
-# Check Root
-check_root() {
-    if [ "$EUID" -ne 0 ]; then
-        echo -e "${RED}Run as root!${NC}"
+# Function to check internet connectivity
+check_internet() {
+    draw_ui
+    echo -e "${YELLOW}Checking internet connectivity...${NC}"
+    if ! ping -c 1 google.com > /dev/null 2>&1; then
+        echo -e "${RED}No internet connection. Please check your network and try again.${NC}"
         exit 1
     fi
+    echo -e "${GREEN}Internet connection is active.${NC}"
 }
 
-# Install Packages
-install_packages() {
-    draw_ui "INSTALLING PACKAGES"
-    apt update -y && apt upgrade -y
-    progress_bar 5
-    apt install -y curl net-tools lsb-release speedtest-cli git nano python3 python3-pip nginx certbot python3-certbot-nginx vnstat iptables dropbear stunnel4 haproxy
-    pip3 install python-telegram-bot
-    # Install Xray
-    bash <(curl -Ls https://raw.githubusercontent.com/XTLS/Xray-install/main/install-release.sh)
-    systemctl enable xray
-    systemctl start xray
-    # Install NoobzVPN
-    wget -q https://raw.githubusercontent.com/Noobz-ID/noobzvpn-server/master/install.sh -O noobz-install.sh
-    bash noobz-install.sh
-    progress_bar 5
+# Function to install dependencies
+install_dependencies() {
+    draw_ui
+    echo -e "${YELLOW}Installing dependencies...${NC}"
+    sudo apt update
+    sudo apt upgrade -y
+    sudo apt install -y nginx certbot python3-pip curl git wget unzip
+    sudo systemctl enable nginx
+    sudo systemctl start nginx
+    echo -e "${GREEN}Dependencies installed successfully.${NC}"
 }
 
-# Disable IPv6
-disable_ipv6() {
-    draw_ui "DISABLING IPV6"
-    sysctl -w net.ipv6.conf.all.disable_ipv6=1
-    sysctl -w net.ipv6.conf.default.disable_ipv6=1
-    sysctl -w net.ipv6.conf.lo.disable_ipv6=1
-    echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf
-    echo "net.ipv6.conf.default.disable_ipv6 = 1" >> /etc/sysctl.conf
-    echo "net.ipv6.conf.lo.disable_ipv6 = 1" >> /etc/sysctl.conf
-    progress_bar 2
+# Function to set up directory structure
+setup_directories() {
+    draw_ui
+    echo -e "${YELLOW}Setting up directories...${NC}"
+    mkdir -p /root/VPN_MANAGER
+    cd /root/VPN_MANAGER || exit 1
+    echo -e "${GREEN}Directory setup completed.${NC}"
 }
 
-# Setup Domain and SSL
-setup_domain_ssl() {
-    draw_ui "DOMAIN SETUP"
-    read -p "Enter your domain (e.g., vpn.yourdomain.com): " DOMAIN
-    echo "$DOMAIN" > /root/VPN_MANAGER/domain.txt
+# Function to download additional scripts
+download_scripts() {
+    draw_ui
+    echo -e "${YELLOW}Downloading scripts...${NC}"
+    local scripts=(
+        "menu"
+        "ssh-menu.sh"
+        "vmess-menu.sh"
+        "vless-menu.sh"
+        "trojan-menu.sh"
+        "shadowsocks-menu.sh"
+        "noobz-menu.sh"
+        "telegram-bot.py"
+        "del-all-exp.sh"
+        "speedtest.sh"
+        "domain-ssl.sh"
+        "info-port.sh"
+        "restart.sh"
+        "backup-restore.sh"
+        "clear-cache.sh"
+        "bot-panel.sh"
+        "change-banner.sh"
+        "limit-speed.sh"
+        "auto-reboot.sh"
+        "running.sh"
+        "clear-log.sh"
+        "check-bandwidth.sh"
+        "reboot.sh"
+        "cert-ssl.sh"
+        "install-udp.sh"
+        "bot-notification.sh"
+        "update-script.sh"
+    )
 
-    # Setup nginx
-    cat <<EOF > /etc/nginx/sites-available/vpn
-server {
-    listen 80;
-    server_name $DOMAIN;
-    return 301 https://\$host\$request_uri;
+    for script in "${scripts[@]}"; do
+        wget -q "https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/$script" -O "$script"
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}Failed to download $script. Please check your internet or repository.${NC}"
+            exit 1
+        fi
+    done
+    chmod +x *.sh
+    chmod +x *.py
+    echo -e "${GREEN}Scripts downloaded and permissions set.${NC}"
 }
-server {
-    listen 443 ssl;
-    server_name $DOMAIN;
-    ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
-    root /var/www/html;
-    index index.html;
-    location /vmess {
-        proxy_pass http://127.0.0.1:443;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-    }
-    location /vless {
-        proxy_pass http://127.0.0.1:443;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-    }
-    location /trojan {
-        proxy_pass http://127.0.0.1:443;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-    }
-    location /shadowsocks {
-        proxy_pass http://127.0.0.1:443;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-    }
+
+# Function to install Xray for VMess, VLESS, etc.
+install_xray() {
+    draw_ui
+    echo -e "${YELLOW}Installing Xray...${NC}"
+    wget -q https://github.com/XTLS/Xray-core/releases/latest/download/xray-linux-64.zip -O xray.zip
+    unzip xray.zip
+    mv xray /usr/local/bin/xray
+    chmod +x /usr/local/bin/xray
+    mkdir -p /usr/local/etc/xray
+    echo -e "${GREEN}Xray installed successfully.${NC}"
+}
+
+# Function to set up Xray config
+setup_xray_config() {
+    draw_ui
+    echo -e "${YELLOW}Setting up Xray configurations...${NC}"
+    cat > /usr/local/etc/xray/vmess_config.json <<EOF
+{
+    "inbounds": [
+        {
+            "port": 443,
+            "protocol": "vmess",
+            "settings": {
+                "clients": []
+            },
+            "streamSettings": {
+                "network": "ws",
+                "wsSettings": {
+                    "path": "/vmess"
+                },
+                "security": "tls",
+                "tlsSettings": {
+                    "certificates": [
+                        {
+                            "certificateFile": "/etc/letsencrypt/live/yourdomain.com/fullchain.pem",
+                            "keyFile": "/etc/letsencrypt/live/yourdomain.com/privkey.pem"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "outbounds": [
+        {
+            "protocol": "freedom"
+        }
+    ]
 }
 EOF
+    cat > /usr/local/etc/xray/vless_config.json <<EOF
+{
+    "inbounds": [
+        {
+            "port": 8443,
+            "protocol": "vless",
+            "settings": {
+                "clients": [],
+                "decryption": "none"
+            },
+            "streamSettings": {
+                "network": "ws",
+                "wsSettings": {
+                    "path": "/vless"
+                },
+                "security": "tls",
+                "tlsSettings": {
+                    "certificates": [
+                        {
+                            "certificateFile": "/etc/letsencrypt/live/yourdomain.com/fullchain.pem",
+                            "keyFile": "/etc/letsencrypt/live/yourdomain.com/privkey.pem"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "outbounds": [
+        {
+            "protocol": "freedom"
+        }
+    ]
+}
+EOF
+    echo -e "${GREEN}Xray configurations set up successfully.${NC}"
+}
+
+# Function to set up Telegram bot dependencies
+setup_telegram_bot() {
+    draw_ui
+    echo -e "${YELLOW}Setting up Telegram bot...${NC}"
+    pip3 install python-telegram-bot
+    touch /root/VPN_MANAGER/telegram.conf
+    echo "BOT_TOKEN=your_bot_token_here" >> /root/VPN_MANAGER/telegram.conf
+    echo "CHAT_ID=your_chat_id_here" >> /root/VPN_MANAGER/telegram.conf
+    echo -e "${GREEN}Telegram bot setup completed. Edit /root/VPN_MANAGER/telegram.conf with your bot token and chat ID.${NC}"
+}
+
+# Function to set up marketing page
+setup_marketing_page() {
+    draw_ui
+    echo -e "${YELLOW}Setting up marketing page...${NC}"
     mkdir -p /var/www/html
-    cat <<EOF > /var/www/html/index.html
+    cat > /var/www/html/index.html <<EOF
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Jubair VPN</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jubair VPN Manager</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; background-color: #f0f0f0; }
-        h1 { color: #0066cc; }
-        p { font-size: 18px; }
-        a { color: #0066cc; text-decoration: none; }
-        a:hover { text-decoration: underline; }
+        h1 { color: #2c3e50; }
+        p { color: #7f8c8d; }
     </style>
 </head>
 <body>
-    <h1>Welcome to Jubair VPN</h1>
-    <p>Fast, Secure, and Reliable VPN Services by JubairBro</p>
+    <h1>Welcome to Jubair VPN Manager</h1>
+    <p>Your trusted VPN solution powered by JubairBro Tools.</p>
     <p>Join our Telegram: <a href="https://t.me/JubairFF">@JubairFF</a></p>
-    <p>Contact us for premium VPN accounts!</p>
 </body>
 </html>
 EOF
-    ln -sf /etc/nginx/sites-available/vpn /etc/nginx/sites-enabled/
-    systemctl restart nginx
-
-    # Setup SSL
-    draw_ui "INSTALLING SSL"
-    certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --email admin@$DOMAIN
-    systemctl restart nginx
-    progress_bar 3
+    echo -e "${GREEN}Marketing page set up at /var/www/html/index.html${NC}"
 }
 
-# Setup Telegram Bot
-setup_telegram_bot() {
-    draw_ui "TELEGRAM BOT SETUP"
-    read -p "Enter Telegram Bot Token: " BOT_TOKEN
-    read -p "Enter Owner Telegram UID: " OWNER_UID
-    cat <<EOF > /root/VPN_MANAGER/telegram.conf
-BOT_TOKEN=$BOT_TOKEN
-OWNER_UID=$OWNER_UID
-ADMINS=$OWNER_UID
-EOF
-    progress_bar 2
-}
+# Main setup process
+draw_ui
+echo -e "${YELLOW}Starting Jubair VPN Manager setup...${NC}"
 
-# Setup Files
-setup_files() {
-    draw_ui "SETTING UP FILES"
-    mkdir -p /root/VPN_MANAGER
-    cd /root/VPN_MANAGER
-    curl -Ls https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/menu -o menu
-    curl -Ls https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/ssh-menu.sh -o ssh-menu.sh
-    curl -Ls https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/vmess-menu.sh -o vmess-menu.sh
-    curl -Ls https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/vless-menu.sh -o vless-menu.sh
-    curl -Ls https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/trojan-menu.sh -o trojan-menu.sh
-    curl -Ls https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/shadowsocks-menu.sh -o shadowsocks-menu.sh
-    curl -Ls https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/noobz-menu.sh -o noobz-menu.sh
-    curl -Ls https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/telegram-bot.py -o telegram-bot.py
-    curl -Ls https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/del-all-exp.sh -o del-all-exp.sh
-    curl -Ls https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/speedtest.sh -o speedtest.sh
-    curl -Ls https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/domain-ssl.sh -o domain-ssl.sh
-    curl -Ls https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/info-port.sh -o info-port.sh
-    curl -Ls https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/restart.sh -o restart.sh
-    curl -Ls https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/backup-restore.sh -o backup-restore.sh
-    curl -Ls https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/clear-cache.sh -o clear-cache.sh
-    curl -Ls https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/bot-panel.sh -o bot-panel.sh
-    curl -Ls https://raw.githubusercontent.com/jubairbro/VPN_MANAGER/main/change-banner.sh -o change-banner.sh
-    chmod +x *.sh
-    chmod +x *.py
-    ln -sf /root/VPN_MANAGER/menu /usr/bin/menu
-    progress_bar 3
-}
+# Step 1: Check internet
+check_internet
 
-# Setup Auto Tasks
-setup_auto_tasks() {
-    draw_ui "SETTING UP AUTO TASKS"
-    echo "0 0 * * * root /root/VPN_MANAGER/del-all-exp.sh" > /etc/cron.d/vpn_manager_expire
-    systemctl restart cron
-    progress_bar 2
-}
+# Step 2: Check apt locks
+check_apt_lock
 
-# Main Setup
-main_setup() {
-    check_root
-    disable_ipv6
-    install_packages
-    setup_domain_ssl
-    setup_telegram_bot
-    setup_files
-    setup_auto_tasks
-    draw_ui "SETUP COMPLETED" "Type 'menu' to start!"
-}
+# Step 3: Install dependencies
+install_dependencies
 
-main_setup
+# Step 4: Set up directories
+setup_directories
+
+# Step 5: Download scripts
+download_scripts
+
+# Step 6: Install Xray
+install_xray
+
+# Step 7: Set up Xray config
+setup_xray_config
+
+# Step 8: Set up Telegram bot
+setup_telegram_bot
+
+# Step 9: Set up marketing page
+setup_marketing_page
+
+# Final message
+draw_ui
+echo -e "${GREEN}Setup completed successfully!${NC}"
+echo -e "${YELLOW}Run the following command to access the main menu:${NC}"
+echo -e "${GREEN}menu${NC}"
+echo -e "${YELLOW}Edit /root/VPN_MANAGER/telegram.conf to set up your Telegram bot.${NC}"
+echo -e "${GREEN}Visit http://<your-vps-ip> to see the nagix server page.${NC}"
