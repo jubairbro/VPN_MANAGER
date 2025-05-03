@@ -12,7 +12,7 @@ draw_ui() {
     echo -e "${GREEN}====================================${NC}"
     echo -e "${YELLOW}      JUBAIR VPN MANAGER SETUP      ${NC}"
     echo -e "${GREEN}====================================${NC}"
-    echo -e "${GREEN}Powered by JubairBro Tools${NC}"
+    echo -e "${GREEN}Powered by Jubair Bro ${NC}"
     echo ""
 }
 
